@@ -1,0 +1,29 @@
+---
+title: "P8105_hw_yx2510"
+author: "Yi Xiao"
+date: "28/09/2018"
+output: html_document
+---
+load package
+```{r}
+library(tidyverse)
+```
+
+Problem 1
+### 1. read and clean the data
+```{r}
+nyc_transit_data =
+        read_csv("./data/NYC_Transit_Subway_Entrance_And_Exit_Data.csv") %>%
+        janitor::clean_names() %>%
+        select(line:entry,vending, ada)
+
+nyc_transit_data$entry = ifelse(nyc_transit_data$entry == "yes", TRUE, FALSE)
+
+```
+After importing the file using read_csv() function, I found that there are upper cases and spaces in the variable names, so I first use the clean_name() for the name cleaning. Then I used the select() function to include those variables we are interested in. At last, ifelse() was used to convert the entry status to corresponding logical variables. There were `r ncol(nyc_transit_data)` columns and `r nrow(nyc_transit_data)`. However, the dataset is not clean since the route information was scattered across several colunms. Hence, data cleaning is required to gather the information in a single column.
+
+```{r}
+
+```
+
+
