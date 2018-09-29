@@ -18,12 +18,31 @@ nyc_transit_data =
         select(line:entry,vending, ada)
 
 nyc_transit_data$entry = ifelse(nyc_transit_data$entry == "yes", TRUE, FALSE)
-
+str(nyc_transit_data)
 ```
-After importing the file using read_csv() function, I found that there are upper cases and spaces in the variable names, so I first use the clean_name() for the name cleaning. Then I used the select() function to include those variables we are interested in. At last, ifelse() was used to convert the entry status to corresponding logical variables. There were `r ncol(nyc_transit_data)` columns and `r nrow(nyc_transit_data)`. However, the dataset is not clean since the route information was scattered across several colunms. Hence, data cleaning is required to gather the information in a single column.
+After importing the file using read_csv() function, I found that there are upper cases and spaces in the variable names, so I first use the clean_name() for the name cleaning. Then I used the select() function to include those variables we are interested in. At last, ifelse() was used to convert the entry status to corresponding logical variables. 
 
+I used str() to give an overview of the data. Some important variables includes line, station name, latitide and longitude of their locations, routes they take, entry type, whether vending and entry are ADA compliant. There were `r ncol(nyc_transit_data)` columns and `r nrow(nyc_transit_data)` rows. However, the dataset is not tidy since the route information was scattered across several colunms. Hence, data cleaning is required to gather the information in a single column.
+
+* There are `r nrow(distinct(nyc_transit_data, line, station_name))` staions in the data.
+
+* There are `r nrow(filter(distinct(nyc_transit_data, line, station_name, ada), ada ==  TRUE))` ADA compliant stations.
+
+* There are `r 100 * round(nrow(filter(nyc_transit_data, vending == "NO"))/nrow(nyc_transit_data), 4)`% of exit/entry
+witout pending allow entry.
+
+### 2. data tidying 
+In this code chunk, I reformated data so that route number and route name are distinct variables.
 ```{r}
+nyc_transit_tidy_data = gather(nyc_transit_data, key = route, value = route_number, route1: route11)
 
 ```
+* There are `r nrow(filter(distinct(nyc_transit_tidy_data, line, station_name, route_number), route_number == "A" ))` 
+distinct stations serve A.
+
+* Of the stations serve A train, there are `r nrow(filter(distinct(nyc_transit_tidy_data, line, 
+station_name, route_number, ada), route_number == "A" & ada == "TRUE" ))` ada compliant stations.
+
+
 
 
