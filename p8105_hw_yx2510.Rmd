@@ -85,6 +85,63 @@ mutate(month = month.name[month])
 
 
 Problem 3
+### 1. load and clean the data
+
+```{r}
+library(p8105.datasets)
+brfss_data = p8105.datasets::brfss_smart2010 %>% 
+                janitor::clean_names() %>%
+                rename(state = locationabbr, state_county = locationdesc) %>%
+                filter(topic == "Overall Health") %>%
+                select(-(class:question),
+                       -(sample_size),
+                       -(confidence_limit_low:geo_location))
+
+brfss_prop_data <- brfss_data %>%
+  spread(key = response, value = data_value) %>% 
+  janitor::clean_names() %>%
+  mutate(proportion =  
+           (excellent + very_good) / (excellent + very_good + good +fair + poor))
+```
+
+### 2. answer the question
+```{r}
+all_state = (nrow(distinct(brfss_prop_data, state))) == 51
+
+max_state = count(brfss_prop_data, state) %>%
+filter(n == max(n))
+```
+
+* `r nrow(distinct(brfss_prop_data, state_county))` of unique locations are included in the dataset. The answer to whether all of the states are presented is `r all_state`. The state with the most record is `r max_state$state`.
+
+```{r}
+excel_2002 = brfss_data %>%
+filter(response == "Excellent" & year == "2002" & !is.na(data_value))
+```
+
+* The median of the excellent response value is `r median(excel_2002$data_value)`.
+
+* Make a histogram of “Excellent” response values in the year 2002.
+```{r}
+ggplot(excel_2002, aes(x = data_value)) + 
+  geom_histogram() +
+  ggtitle("Histogram of excellent response values in 2002")
+        
+```
+
+* Make a scatterplot showing the proportion of “Excellent” response values in New York County and Queens County (both in NY State) in each year from 2002 to 2010.
+```{r}
+ny_queen_excel = filter(brfss_prop_data, state_county %in% c("NY - New York County", "NY - Queens County") 
+                        & year %in% c(2002:2010))
+                        
+ggplot(ny_queen_excel, aes(x = year, y = proportion, color = state_county)) +
+        ggtitle("“Excellent” response values in New York County and Queens County from 2002 to 2010") +
+        geom_point(size = 2) +
+        scale_color_discrete(name = "Location") +
+        labs(y = "Excellent Proportion")
+
+```
+
 
 
 
