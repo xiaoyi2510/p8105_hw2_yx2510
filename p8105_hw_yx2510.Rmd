@@ -7,6 +7,8 @@ output: html_document
 load package
 ```{r}
 library(tidyverse)
+library(readxl)
+library(magrittr)
 ```
 
 Problem 1
@@ -41,8 +43,48 @@ nyc_transit_tidy_data = gather(nyc_transit_data, key = route, value = route_numb
 distinct stations serve A.
 
 * Of the stations serve A train, there are `r nrow(filter(distinct(nyc_transit_tidy_data, line, 
-station_name, route_number, ada), route_number == "A" & ada == "TRUE" ))` ada compliant stations.
+station_name, route_number, ada), route_number == "A" & ada == "TRUE" ))` ADA compliant stations.
 
+Problem 2
+### 1. read and clean Mr Trash wheel data
+```{r}
+ trash_wheel_data = readxl::read_xlsx("./data/HealthyHarborWaterWheelTotals2017-9-26.xlsx", 
+                     sheet = "Mr. Trash Wheel", 
+                     range = "A2:N258")  %>%
+                     janitor::clean_names()  %>%
+                     filter(!dumpster)  %>%
+                     mutate(sports_balls = round(sports_balls, digits = 0)) %>% 
+                     mutate(sports_balls = as.integer(sports_balls))
+trash_wheel_data
+```
+### 2. read and clean 2016 and 2017 precipitation data
+```{r}
+prcp_16_data =
+  readxl::read_xlsx("./data/HealthyHarborWaterWheelTotals2017-9-26.xlsx", 
+             sheet = "2016 Precipitation", 
+             range = "A2:B14") %>%
+  janitor::clean_names() %>%
+  filter(!is.na(total)) %>% 
+  mutate(year = 2016)
+
+prcp_17_data =
+  readxl::read_xlsx("./data/HealthyHarborWaterWheelTotals2017-9-26.xlsx", 
+             sheet = "2017 Precipitation", 
+             range = "A2:B14") %>%
+  janitor::clean_names() %>%
+  filter(!is.na(total)) %>% 
+  mutate(year = 2017)
+```
+
+
+### 3. combine the data
+```{r}
+prcp_comb = full_join(prcp_16_data, prcp_17_data, by = c("month", "total")) %>%
+mutate(month = month.name[month])
+```
+
+
+Problem 3
 
 
 
