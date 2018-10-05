@@ -151,6 +151,7 @@ filter(response == "Excellent" & year == "2002" & !is.na(data_value))
 
 
 In 2002, what is the median of the “Excellent” response value?
+
 * The median of the excellent response value is `r median(excel_2002$data_value)`.
 
 ### 3. make plots
