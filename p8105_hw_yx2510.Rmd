@@ -20,24 +20,24 @@ nyc_transit_data =
         janitor::clean_names() %>%
         select(line:entry,vending, ada)%>%
         mutate(entry = recode(entry, "YES" = TRUE, "NO" = FALSE))
-str(nyc_transit_data)
+head(nyc_transit_data)
 ```
 After importing the file using read_csv() function, I found that there are upper cases and spaces in the variable names, so I first use the clean_name() for the name cleaning. Then I used the select() function to include those variables we are interested in. At last, recode() was used to convert the entry status to corresponding logical variables. 
 
 Some important variables includes line, station name, latitide and longitude of their locations, routes they take, entry type, whether vending and entry are ADA compliant. There were *`r ncol(nyc_transit_data)`* columns and *`r nrow(nyc_transit_data)`* rows. However, the dataset is not tidy since the route information was scattered across several colunms. Hence, data cleaning is required to gather the information in a single column.
 
-* There are *`r nrow(distinct(nyc_transit_data, line, station_name))`* staions in the data.
+* There are *`r nrow(distinct(nyc_transit_data, line, station_name))`* distinct staions in the data.
 
 * There are *`r nrow(filter(distinct(nyc_transit_data, line, station_name, ada), ada ==  TRUE))`* ADA compliant stations.
 
-* There are `r 100 * round(nrow(filter(nyc_transit_data, vending == "NO"))/nrow(nyc_transit_data), 4)`% of exit/entry
+* There are `r 100 * round(nrow(filter(nyc_transit_data, vending == "NO" & entry == 1))/nrow(filter(nyc_transit_data, vending == "NO")), 4)`% of exit/entry
 witout pending allow entry.
 
 ### 2. data tidying 
 In this code chunk, I reformated data so that route number and route name are distinct variables.
 ```{r}
 nyc_transit_tidy_data = gather(nyc_transit_data, key = route, value = route_number, route1: route11)
-str(nyc_transit_tidy_data)
+head(nyc_transit_tidy_data)
 ```
 * There are `r nrow(filter(distinct(nyc_transit_tidy_data, line, station_name, route_number), route_number == "A" ))` 
 distinct stations serve A.
@@ -49,44 +49,67 @@ station_name, route_number, ada), route_number == "A" & ada == "TRUE" ))` ADA co
 
 ### 1. read and clean Mr Trash wheel data
 ```{r}
- trash_wheel_data = readxl::read_xlsx("./data/HealthyHarborWaterWheelTotals2017-9-26.xlsx", 
+ trash_wheel_data = readxl::read_xlsx("./data/HealthyHarborWaterWheelTotals2018-7-28.xlsx", 
                      sheet = "Mr. Trash Wheel", 
-                     range = "A2:N258")  %>%
+                     range = "A2:N337")  %>%
                      janitor::clean_names()  %>%
-                     filter(!is.na(dumpster))  %>%
+                     filter(!is.na(dumpster))  %>%     #remove data wiithout dumpster
+                     filter(!.$month == "Grand Total") %>%  # remove grand toal 
                      mutate(sports_balls = round(sports_balls, digits = 0)) %>% 
                      mutate(sports_balls = as.integer(sports_balls))
-str(trash_wheel_data)
+head(trash_wheel_data)
 
 ```
 ### 2. read and clean 2016 and 2017 precipitation data
 ```{r}
 prcp_16_data =
-  readxl::read_xlsx("./data/HealthyHarborWaterWheelTotals2017-9-26.xlsx", 
+  readxl::read_xlsx("./data/HealthyHarborWaterWheelTotals2018-7-28.xlsx", 
              sheet = "2016 Precipitation", 
              range = "A2:B14") %>%
   janitor::clean_names() %>%
   filter(!is.na(total)) %>% 
   mutate(year = 2016)
 
+head(prcp_16_data)
+
 prcp_17_data =
-  readxl::read_xlsx("./data/HealthyHarborWaterWheelTotals2017-9-26.xlsx", 
+  readxl::read_xlsx("./data/HealthyHarborWaterWheelTotals2018-7-28.xlsx", 
              sheet = "2017 Precipitation", 
              range = "A2:B14") %>%
   janitor::clean_names() %>%
   filter(!is.na(total)) %>% 
   mutate(year = 2017)
+head(prcp_17_data)
 ```
 
 
 ### 3. combine the data
 ```{r}
-prcp_16_data = mutate(prcp_16_data, month = month.name)
-prcp_17_data = mutate(prcp_17_data, month = month.name[month])
+prcp_16_data = mutate(prcp_16_data, month = month.name) # change month 
+prcp_17_data = mutate(prcp_17_data, month = month.name[month]) # change month
 prcp_comb = full_join(prcp_16_data, prcp_17_data)
-str(prcp_comb)
+prcp_comb
 ```
-This dataset has `r nrow(trash_wheel_data)` observations including 14 variables such as dumpster, month, year, date, weight_tons and number of all types of trash collected by Mr Trash Wheel in Baltimore from 2014 to 2017. There are `r nrow(prcp_comb)` observations included in the combined date prcp_comb, which recorded the precipitation infomation.
+The first dataset trash_wheel data has `r nrow(trash_wheel_data)` observations including `r ncol(trash_wheel_data)` variables such as dumpster, month, year, date, weight_tons and number of all types of trash collected by Mr Trash Wheel in Baltimore from 2014 to 2017. 
+
+There are `r nrow(prcp_comb)` observations included in the combined date prcp_comb, which recorded the precipitation infomation. prcp_16_data contains 12 observations and prcp_17_data also contains 12 observations after cleaning. Both two dataset record month, total precipitation and year.
+
+#### questions
+1. total precipitation in 2017 is 32.93.
+```{r}
+sum(prcp_17_data$total)
+```
+
+2. The median number of sports balls in a dumpster in 2016 is 26.
+```{r}
+trash_wheel_data %>%
+        select(sports_balls, year) %>%
+        filter(year == "2016") %>%
+        pull(sports_balls) %>%
+        median()
+```
+
+
 
 # Problem 3
 ### 1. load and clean the data
@@ -105,7 +128,9 @@ brfss_prop_data <- brfss_data %>%
   spread(key = response, value = data_value) %>% 
   janitor::clean_names() %>%
   mutate(proportion =  
-           (excellent + very_good) / (excellent + very_good + good +fair + poor))
+           (excellent + very_good) / (excellent + fair + good + poor + very_good))
+
+
 ```
 
 ### 2. answer the question
@@ -115,6 +140,7 @@ all_state = (nrow(distinct(brfss_prop_data, state))) == 51
 max_state = count(brfss_prop_data, state) %>%
 filter(n == max(n))
 ```
+How many unique locations are included in the dataset? Is every state represented? What state is observed the most?
 
 * `r nrow(distinct(brfss_prop_data, state_county))` of unique locations are included in the dataset. The answer to whether all of the states are presented is `r all_state`. The state with the most record is `r max_state$state` (`r max_state$n` observations).
 
@@ -123,9 +149,11 @@ excel_2002 = brfss_data %>%
 filter(response == "Excellent" & year == "2002" & !is.na(data_value))
 ```
 
+
+In 2002, what is the median of the “Excellent” response value?
 * The median of the excellent response value is `r median(excel_2002$data_value)`.
 
-### make plots
+### 3. make plots
 * Make a histogram of “Excellent” response values in the year 2002.
 ```{r}
 ggplot(excel_2002, aes(x = data_value)) + 
@@ -136,10 +164,10 @@ ggplot(excel_2002, aes(x = data_value)) +
 
 * Make a scatterplot showing the proportion of “Excellent” response values in New York County and Queens County (both in NY State) in each year from 2002 to 2010.
 ```{r}
-ny_queen_excel = filter(brfss_prop_data, state_county %in% c("NY - New York County", "NY - Queens County") 
-                        & year %in% c(2002:2010))
+ny_queen_excel = brfss_prop_data %>%
+        filter(state_county == "NY - New York County" | state_county == "NY - Queens County")
                         
-ggplot(ny_queen_excel, aes(x = year, y = proportion, color = state_county)) +
+ggplot(ny_queen_excel, aes(x = year, y = excellent, color = state_county)) +
         ggtitle("“Excellent” proportion in New York County and Queens County") +
         geom_point(size = 2) +
         scale_color_discrete(name = "Location") +
